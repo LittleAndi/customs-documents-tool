@@ -16,6 +16,7 @@ import { ContainerStatus } from "@/types/verification";
 import { toast } from "sonner";
 import { Search, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useApi } from "@/hooks/useApi";
 
 // Mock data for demonstration
 const mockStatuses: Record<string, ContainerStatus> = {
@@ -43,6 +44,7 @@ const CheckStatus = () => {
   const [results, setResults] = useState<ContainerStatus[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
+  const api = useApi();
 
   const handleSearch = async () => {
     if (!containerInput.trim()) {
@@ -51,34 +53,45 @@ const CheckStatus = () => {
     }
 
     setIsSearching(true);
+    
+    try {
+      const containerNumbers = containerInput
+        .split(/[\s,]+/)
+        .filter(Boolean)
+        .map(num => num.trim().toUpperCase());
 
-    // Parse container numbers (comma-separated)
-    const containerIds = containerInput
-      .split(",")
-      .map((id) => id.trim().toUpperCase())
-      .filter((id) => id.length > 0);
+      // Call API for each container
+      const promises = containerNumbers.map(async (containerNum) => {
+        try {
+          const response = await api.get<any>(`/containers/${containerNum}/status`);
+          
+          // Map API response to ContainerStatus
+          return {
+            containerId: containerNum,
+            status: response.status === "error" ? "completed" : "completed",
+            lastUpdated: new Date().toISOString(),
+            result: response.status as "valid" | "warnings" | "errors",
+          } as ContainerStatus;
+        } catch (error) {
+          console.error(`Error fetching ${containerNum}:`, error);
+          return null;
+        }
+      });
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
+      const foundResults = (await Promise.all(promises)).filter(Boolean) as ContainerStatus[];
 
-    const foundResults: ContainerStatus[] = containerIds.map((id) => {
-      // Check if we have mock data for this container
-      if (mockStatuses[id]) {
-        return mockStatuses[id];
+      if (foundResults.length === 0) {
+        toast.error("No results found for the entered container numbers");
+      } else {
+        toast.success(`Found ${foundResults.length} container(s)`);
       }
-      // Return a not found result
-      return {
-        containerId: id,
-        status: "failed" as const,
-        lastUpdated: new Date().toISOString().split("T")[0] + " " + new Date().toLocaleTimeString(),
-      };
-    });
 
-    setResults(foundResults);
-    setIsSearching(false);
-
-    if (foundResults.length > 0) {
-      toast.success(`Found ${foundResults.length} container(s)`);
+      setResults(foundResults);
+    } catch (error) {
+      console.error("Search error:", error);
+      toast.error("Failed to search containers. Please try again.");
+    } finally {
+      setIsSearching(false);
     }
   };
 

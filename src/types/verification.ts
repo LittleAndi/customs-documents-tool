@@ -5,33 +5,80 @@ export interface ContainerStatus {
   result?: "valid" | "warnings" | "errors";
 }
 
-export interface DocumentInfo {
-  type: string;
-  fileName: string;
-  status: "valid" | "warnings" | "errors";
-  notes?: string;
+export interface Message {
+  type: "error" | "warning" | "info" | "success";
+  message: string;
 }
 
-export interface ConsistencyCheck {
-  check: string;
-  result: "pass" | "warning" | "fail";
-  details?: string;
+export interface StatusWithMessages {
+  status: "error" | "warning" | "info" | "success";
+  messages: Message[];
+}
+
+export interface Article {
+  articleNumber: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  containerNumber: string;
+}
+
+export interface ConfidenceValue {
+  value: any;
+  confidence: {
+    label: string;
+    value: number;
+  };
+}
+
+export interface DocumentExtractedData {
+  status: string;
+  messages: Message[];
+  type: string;
+  delimiterFormat?: {
+    thousandSeparator: string;
+    decimalSeparator: string;
+  } | null;
+  articles?: any[];
+  orderNumbers?: ConfidenceValue[];
+  flattenedOrderNumbers?: string[];
+  containerNumbers?: ConfidenceValue[];
+  flattenedContainerNumbers?: string[];
+  invoiceNumber?: ConfidenceValue;
+  invoiceDate?: ConfidenceValue;
+  packingListDate?: ConfidenceValue;
+  grossWeightTotal?: ConfidenceValue;
+  itemsSubtotalAmount?: ConfidenceValue;
+  deductions?: ConfidenceValue[];
+  flattenedDeductions?: string[];
+}
+
+export interface DocumentDetail {
+  id: string;
+  originalDocumentId?: string;
+  splittedDocumentId?: string;
+  classifiedDocumentId?: string;
+  type: string;
+  hasSparePartsOrSamples: boolean;
+  extractedData?: DocumentExtractedData;
+  storage?: {
+    bucketName: string;
+    fileName: string;
+  };
+  createdAt: string;
+  handled?: boolean;
+  updatedAt?: string;
 }
 
 export interface VerificationResult {
-  containerId: string;
-  timestamp: string;
-  overallResult: "valid" | "warnings" | "errors";
-  summary: {
-    shipper?: string;
-    consignee?: string;
-    origin?: string;
-    destination?: string;
-    declaredValue?: string;
-    weight?: string;
-    packages?: number;
-    documentsProcessed: number;
+  status: "error" | "warning" | "info" | "success";
+  hasSamplesOrSpareParts: boolean;
+  validationStatus: StatusWithMessages;
+  documentInternalStatus: StatusWithMessages;
+  articles: Article[];
+  documents: {
+    packingList?: DocumentDetail;
+    commercialInvoice?: DocumentDetail;
+    billOfLading?: DocumentDetail;
   };
-  documents: DocumentInfo[];
-  consistencyChecks: ConsistencyCheck[];
 }
